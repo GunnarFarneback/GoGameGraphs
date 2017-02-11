@@ -33,9 +33,14 @@ This table contains all unique Go Game Graphs (up to isomorphism)
 induced from board graphs with up to 6 nodes, and a selection of
 larger ones. More explanations follow after the table.
 
+id | board graph | board nodes | board edges | game nodes | game edges | longest path
+--- | ---------- | ----------- | ----------- | ---------- | ---------- | ------------
+[1](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/graphs/graph1) | ![graph1](http://www.lysator.liu.se/~gunnar/graphs/graph1.svg) | 2 | 1 | 5 | 12 | [3](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/sample_longest_paths/path1)
+[3](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/graphs/graph3) | ![graph3](http://www.lysator.liu.se/~gunnar/graphs/graph3.svg) | 3 | 2 | 15 | 42 | [15](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/sample_longest_paths/path3)
+
 
 id | board graph | board nodes | board edges | game nodes | game edges | longest path
--- | ----------- | ----------- | ----------- | ---------- | ---------- | ------------
+--- | ---------- | ----------- | ----------- | ---------- | ---------- | ------------
 [1](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/graphs/graph1) | ![graph1](http://www.lysator.liu.se/~gunnar/graphs/graph1.svg) | 2 | 1 | 5 | 12 | [3](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/sample_longest_paths/path1)
 [3](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/graphs/graph3) | ![graph3](http://www.lysator.liu.se/~gunnar/graphs/graph3.svg) | 3 | 2 | 15 | 42 | [15](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/sample_longest_paths/path3)
 [7](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/graphs/graph7) | ![graph7](http://www.lysator.liu.se/~gunnar/graphs/graph7.svg) | 3 | 3 | 19 | 54 | [19](https://github.com/GunnarFarneback/GoGameGraphs/blob/master/sample_longest_paths/path7)
