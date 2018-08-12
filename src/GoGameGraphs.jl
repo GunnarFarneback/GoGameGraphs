@@ -1,12 +1,14 @@
 module GoGameGraphs
 
-export Board, GameGraph, export_graph
+export Board, GameGraph, export_graph, unique_graphs, smallest_isomorphic_id,
+       is_board_graph_connected, remap
+
+using Combinatorics
 
 # --------- Board code --------------------------------
 """
-```
-Board(id::Integer)
-```
+    Board(id::Integer)
+
 Generate a representation of a go board graph with the given `id`.
 The number of nodes is the smallest `n` such that `2^(n*(n-1)/2)>id`.
 The edges are found in the following way:
@@ -16,9 +18,8 @@ The edges are found in the following way:
 Note: Many of these graphs will be isomorphic. Boards with 2 to 12
 nodes are supported (corresponding to `1 <= id < 2^66`).
 
-```
-Board(edges::Vector{Vector{Int}})
-```
+    Board(edges::Vector{Vector{Int}})
+
 Construct a board graph from a specified list of outgoing edges from
 each node. Note, if this does not describe an undirected graph, things
 will go bad if it is used to construct a game graph.
@@ -163,14 +164,12 @@ function trymove(board::Board, j::Int, allow_suicide = true)
 end
 
 """
-```
-GameGraph(board::Board)
-```
+    GameGraph(board::Board)
+
 Compute a representation of the graph of positions for `board`.
 
-```
-GameGraph(board::Board, allow_suicide = false)
-```
+    GameGraph(board::Board, allow_suicide = false)
+
 Compute a representation of the graph of positions for `board` with no suicide moves.
 """
 type GameGraph
@@ -229,10 +228,9 @@ function compress_board_graph(B::Matrix{Int})
 end
 
 """
-```
-export_graph(filename, graph::GameGraph)
-export_graph(filename, edges::Vector{Vector{Int}})
-```
+    export_graph(filename, graph::GameGraph)
+    export_graph(filename, edges::Vector{Vector{Int}})
+
 Export a graph to file. Format is simplest possible. On line `n` is
 listed the outgoing edges from node `n`, separated by spaces.
 """
@@ -249,9 +247,8 @@ function export_graph(filename::String, graph::GameGraph)
 end
 
 """
-```
-unique_graphs(n)
-```
+    unique_graphs(n)
+
 Identify the set of unique undirected graphs on `N` unlabeled vertices.
 """
 # Identify unique graphs on `n` unlabeled vertices.
@@ -282,12 +279,11 @@ function unique_graphs(n)
 end
 
 """
-```
-id(board::Board)
-```
+    smallest_isomorphic_id(board::Board)
+
 Find smallest id generating a board graph isomorphic to `board`.
 """
-function id(board::Board)
+function smallest_isomorphic_id(board::Board)
     N = length(board.edges)
     m = N * (N - 1) ÷ 2
     a = [Int128(1) << x for x in ((m-1):-1:0)]
@@ -307,13 +303,17 @@ function id(board::Board)
 end
 
 """
-```
-is_graph_connected(id)
-```
-Determine whether the board graph with the given `id` is connected.
+    is_board_graph_connected(id, N)
+
+Determine whether the board graph with the given `id` is connected on
+`N` nodes.
+
+    is_board_graph_connected(id)
+
+Like above when `N` is the smallest number of nodes that can represent
+the board graph `id`, i.e. with no isolated nodes.
 """
-function is_graph_connected(N, id)
-    N = num_nodes(id)
+function is_board_graph_connected(id, N = num_nodes(id))
     m = N * (N - 1) ÷ 2
     x = map(x->parse(Int, x), split(base(2, id, m), ""))
     mask = !triu(trues(N, N))
@@ -322,6 +322,64 @@ function is_graph_connected(N, id)
     C += C'
     C += eye(Int, N)
     return all(C^(N-1) .> 0)
+end
+
+"""
+    remap(source_board::Board, target_board::Board)
+
+Compute a remapping of the vertices of the Game Graph generated from
+`source_board` to the Game Graph generated from `target_board`.
+`source_board` and `target_board` must be isomorphic.
+
+    remap(board::Board)
+
+Like above where `target_board` is the `Board` with smallest id that
+is isomorphic to `source_board`.
+"""
+function remap(source_board::Board,
+               target_board::Board = Board(smallest_isomorphic_id(source_board)))
+    if length(source_board.edges) != length(target_board.edges)
+        error("source_board and target_board are not isomorphic")
+    end
+    N = length(source_board.edges)
+    m = N * (N - 1) ÷ 2
+    a = [Int128(1) << x for x in ((m-1):-1:0)]
+    C_source = zeros(Int, N, N)
+    C_target = zeros(Int, N, N)
+    for i = 1:N
+        for j in source_board.edges[i]
+            C_source[i,j] = C_source[j,i] = 1
+        end
+        for j in target_board.edges[i]
+            C_target[i,j] = C_target[j,i] = 1
+        end
+    end
+    permutation = Int[]
+    for p in permutations(1:N)
+        if C_source[p, p] == C_target
+            permutation = p
+            break
+        end
+    end
+    if isempty(permutation)
+        error("source_board and target_board are not isomorphic")
+    end
+
+    B = Int[]
+    for i = 1:3^N
+        if setup_position!(source_board, i)
+            j = 1 + parse(Int, base(3, i - 1, N)[permutation], 3)
+            push!(B, j)
+        end
+    end
+
+    BB = sort(B)
+    M = Int[]
+    for i = 1:length(B)
+        push!(M, find(BB .== B[i])[1])
+    end
+
+    return M
 end
 
 end
