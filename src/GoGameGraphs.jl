@@ -24,7 +24,7 @@ Construct a board graph from a specified list of outgoing edges from
 each node. Note, if this does not describe an undirected graph, things
 will go bad if it is used to construct a game graph.
 """
-type Board
+mutable struct Board
     edges::Vector{Vector{Int}}
     board::Vector{Int}
 end
@@ -125,7 +125,7 @@ function play!(board::Board, node, color)
 end
 
 # Encode the board in base 3.
-ternary_encode(board::Board) = 1 + dot(board.board, 3.^(length(board.board)-1:-1:0))
+ternary_encode(board::Board) = 1 + dot(board.board, 3 .^ (length(board.board)-1:-1:0))
 
 # Set up stones on a board to match a base 3 encoding. This is done by
 # playing the stones one by one, starting from the empty board. If and
@@ -172,7 +172,7 @@ Compute a representation of the graph of positions for `board`.
 
 Compute a representation of the graph of positions for `board` with no suicide moves.
 """
-type GameGraph
+mutable struct GameGraph
     edges::Vector{Vector{Int}}
 end
 
@@ -251,7 +251,6 @@ end
 
 Identify the set of unique undirected graphs on `N` unlabeled vertices.
 """
-# Identify unique graphs on `n` unlabeled vertices.
 function unique_graphs(n)
     n > 8 && error("You probably don't have enough memory to use this function for n > 8.")
     m = n * (n - 1) ÷ 2
@@ -264,7 +263,7 @@ function unique_graphs(n)
             continue
         end
         x = map(x->parse(Int, x), split(base(2, k - 1, m), ""))
-        mask = !triu(trues(n, n))
+        mask = .!triu(trues(n, n))
         C = zeros(Int, n, n)
         C[mask] = x
         C += C'
@@ -293,7 +292,7 @@ function smallest_isomorphic_id(board::Board)
             C[i,j] = C[j,i] = 1
         end
     end
-    mask = !triu(trues(N, N))
+    mask = .!triu(trues(N, N))
     id = typemax(Int128)
     for p in permutations(1:N)
         i = dot(C[p,p][mask], a)
@@ -316,7 +315,7 @@ the board graph `id`, i.e. with no isolated nodes.
 function is_board_graph_connected(id, N = num_nodes(id))
     m = N * (N - 1) ÷ 2
     x = map(x->parse(Int, x), split(base(2, id, m), ""))
-    mask = !triu(trues(N, N))
+    mask = .!triu(trues(N, N))
     C = zeros(Int, N, N)
     C[mask] = x
     C += C'
