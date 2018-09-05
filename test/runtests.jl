@@ -1,15 +1,17 @@
 using GoGameGraphs
-using Base.Test
+using Compat.Test
+using Compat
 
 for id in reduce(vcat, [[2^i-1, 2^i] for i in 1:62])
     @test GoGameGraphs.num_nodes(id) == length(Board(id).edges)
 end
 
-filename = tempname()
-for id in [1, 3, 7, 11, 12, 13, 15, 30, 31, 63]
-    export_graph(filename, GameGraph(Board(id)))
-    s = readstring(joinpath(dirname(@__FILE__), "../graphs/graph$(id)"))
-    @test s == readstring(filename)
+let filename = tempname()
+    for id in [1, 3, 7, 11, 12, 13, 15, 30, 31, 63]
+        export_graph(filename, GameGraph(Board(id)))
+        s = read(joinpath(dirname(@__FILE__), "../graphs/graph$(id)"), String)
+        @test s == read(filename, String)
+    end
 end
 
 function is_path_valid(graph::GameGraph, path::Vector{Int})
@@ -21,16 +23,17 @@ function is_path_valid(graph::GameGraph, path::Vector{Int})
     return true
 end
 
-sample_paths_dir = joinpath(dirname(@__FILE__), "../sample_longest_paths")
+sample_paths_dir = joinpath(@__DIR__, "../sample_longest_paths")
 function read_sample_path(filename)
-    path_string = readstring(joinpath(sample_paths_dir, filename))
-    path = [parse(Int, n) for n in split(path_string, "\n", keep = false)]
+    path_string = read(joinpath(sample_paths_dir, filename), String)
+    path = [parse(Int, n) for n in Compat.split(path_string, "\n",
+                                                keepempty = false)]
     return path
 end
 
 for filename in readdir(sample_paths_dir)
     path = read_sample_path(filename)
-    graph = GameGraph(Board(parse(Int, replace(filename, "path", ""))))
+    graph = GameGraph(Board(parse(Int, Compat.replace(filename, "path" => ""))))
     @test is_path_valid(graph, path)
 end
 

@@ -253,7 +253,7 @@ board nodes | Number of nodes in the board graph.
 board edges | Number of edges in the board graph.
 game nodes | Number of nodes in the game graph. Corresponds to the number of legal positions.
 game edges | Number of edges in the game graph. Corresponds to the number of distinct moves.
-longest path | Length of the longest path starting at node 1 (empty position). Written as an interval if there is a gap between the lower and the upper bound. A lower bound of 1 means that no serious attempt to find a long path has been made.
+longest path | Length of the longest simple path starting at node 1 (empty position). Written as an interval if there is a gap between the lower and the upper bound. A lower bound of 1 means that no serious attempt to find a long path has been made.
 
 Note: The table contains no board graphs with isolated nodes since
 they induce game graphs isomorphic to the same graph without the

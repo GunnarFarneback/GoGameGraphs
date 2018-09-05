@@ -1,4 +1,9 @@
 module GoGameGraphs
+using Compat
+
+@static if VERSION >= v"0.7"
+    using LinearAlgebra
+end
 
 export Board, GameGraph, export_graph, unique_graphs, smallest_isomorphic_id,
        is_board_graph_connected, remap
@@ -134,7 +139,11 @@ ternary_encode(board::Board) = 1 + dot(board.board, 3 .^ (length(board.board)-1:
 # the requested base 3 encoding. In that case return false.
 function setup_position!(board::Board, pos::Int)
     clear!(board)
-    x = base(3, pos - 1, length(board.board))
+    if VERSION < v"0.7-"
+        x = base(3, pos - 1, length(board.board))
+    else
+        x = string(pos - 1, base = 3, pad = length(board.board))
+    end
     for i = 1:length(board.board)
         c = parse(Int, x[i])
         if c > 0
@@ -196,7 +205,6 @@ function GameGraph(board::Board; allow_suicide = true)
         end
     end
 
-    I = find(sum(B, 1) .!= 0)
     B = compress_board_graph(B)
     edges = [sort(vec(filter(x -> x > 0, B[:,k]))) for k = 1:size(B, 2)]
 
@@ -217,9 +225,9 @@ end
 # lack successors in B. We handle this by assuming that first column
 # in B corresponds to the empty board and never remove it.
 function compress_board_graph(B::Matrix{Int})
-    Bsum = sum(B, 1)
+    Bsum = vec(Compat.sum(B, dims = 1))
     Bsum[1] = 1
-    I = find(Bsum .!= 0)
+    I = findall(Bsum .!= 0)
     J = zeros(Int, size(B, 2))
     J[I] = 1:length(I)
     C = B[:,I]
@@ -262,7 +270,12 @@ function unique_graphs(n)
         if isomorphisms[k] >= 0
             continue
         end
-        x = map(x->parse(Int, x), split(base(2, k - 1, m), ""))
+        if VERSION < v"0.7-"
+            x = map(x->parse(Int, x), split(base(2, k - 1, m), ""))
+        else
+            x = map(x->parse(Int, x),
+                    split(string(k - 1, base = 2, pad = m), ""))
+        end
         mask = .!triu(trues(n, n))
         C = zeros(Int, n, n)
         C[mask] = x
@@ -272,7 +285,7 @@ function unique_graphs(n)
             i = dot(C[p,p][mask], a)
             push!(id, i)
         end
-        isomorphisms[id + 1] = minimum(id)
+        isomorphisms[id .+ 1] .= minimum(id)
     end
     return unique(isomorphisms)
 end
@@ -314,12 +327,16 @@ the board graph `id`, i.e. with no isolated nodes.
 """
 function is_board_graph_connected(id, N = num_nodes(id))
     m = N * (N - 1) ÷ 2
-    x = map(x->parse(Int, x), split(base(2, id, m), ""))
+    if VERSION < v"0.7-"
+        x = map(x->parse(Int, x), split(base(2, id, m), ""))
+    else
+        x = map(x->parse(Int, x), split(string(id, base = 2, pad = m), ""))
+    end
     mask = .!triu(trues(N, N))
     C = zeros(Int, N, N)
     C[mask] = x
     C += C'
-    C += eye(Int, N)
+    C += I
     return all(C^(N-1) .> 0)
 end
 
@@ -367,7 +384,13 @@ function remap(source_board::Board,
     B = Int[]
     for i = 1:3^N
         if setup_position!(source_board, i)
-            j = 1 + parse(Int, base(3, i - 1, N)[permutation], 3)
+            if VERSION < v"0.7-"
+                j = 1 + parse(Int, base(3, i - 1, N)[permutation], 3)
+            else
+                j = 1 + parse(Int,
+                              string(i - 1, base = 3, pad = N)[permutation],
+                              base = 3)
+            end
             push!(B, j)
         end
     end
@@ -375,7 +398,7 @@ function remap(source_board::Board,
     BB = sort(B)
     M = Int[]
     for i = 1:length(B)
-        push!(M, find(BB .== B[i])[1])
+        push!(M, findall(BB .== B[i])[1])
     end
 
     return M
