@@ -10,6 +10,12 @@ export Board, GameGraph, export_graph, unique_graphs, smallest_isomorphic_id,
 
 using Combinatorics
 
+# Load LightGraphs integration whenever both packages are active.
+using Requires
+function __init__()
+    @require LightGraphs="093fc24a-ae57-5d10-9952-331d41423f4d" include("lightgraphs.jl")
+end
+
 # --------- Board code --------------------------------
 """
     Board(id::Integer)
