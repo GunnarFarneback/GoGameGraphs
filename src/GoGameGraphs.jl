@@ -189,6 +189,7 @@ Compute a representation of the graph of positions for `board` with no suicide m
 """
 mutable struct GameGraph
     edges::Vector{Vector{Int}}
+    board::Vector{Vector{Int}}
 end
 
 # B is the transition matrix indexed by move number. Illegal moves are
@@ -198,8 +199,10 @@ end
 function GameGraph(board::Board; allow_suicide = true)
     N = length(board.edges)
     B = zeros(Int, 2 * N, 3^N)
+    boards = fill(Int[], 3^N)
     for j = 1:3^N
         if setup_position!(board, j)
+            boards[j] = copy(board.board)
             for i = 1:2*N
                 B[i,j] = trymove(board, i, allow_suicide)
                 # Filter out single stone suicides to get rid of
@@ -211,10 +214,10 @@ function GameGraph(board::Board; allow_suicide = true)
         end
     end
 
-    B = compress_board_graph(B)
+    B, boards = compress_board_graph(B, boards)
     edges = [sort(vec(filter(x -> x > 0, B[:,k]))) for k = 1:size(B, 2)]
 
-    return GameGraph(edges)
+    return GameGraph(edges, boards)
 end
 
 function Base.show(io::IO, graph::GameGraph)
@@ -230,7 +233,7 @@ end
 # no successors, breaking the assumption that only illegal positions
 # lack successors in B. We handle this by assuming that first column
 # in B corresponds to the empty board and never remove it.
-function compress_board_graph(B::Matrix{Int})
+function compress_board_graph(B::Matrix{Int}, boards::Vector{Vector{Int}})
     Bsum = vec(Compat.sum(B, dims = 1))
     Bsum[1] = 1
     I = findall(Bsum .!= 0)
@@ -238,7 +241,7 @@ function compress_board_graph(B::Matrix{Int})
     J[I] = 1:length(I)
     C = B[:,I]
     C[C.>0] = J[C[C.>0]]
-    return C
+    return C, boards[I]
 end
 
 """

@@ -48,13 +48,15 @@ graph terms that means no self-edges, regardless of the setting of
 `allow_self_capture`.)
 """
 function go_game_graph(board_graph::LG.SimpleGraph; allow_self_capture = true,
-                       override_size_limit = false)
+                       override_size_limit = false,
+                       boards = nothing)
     if LG.nv(board_graph) > 12 && !override_size_limit
         error("Board has more than 12 vertices, which will produce a very large game graph. If you are confident that your computer can handle that, add the keyword argument `override_size_limit=true`.")
     end
     board_edges = [LG.outneighbors(board_graph, v) for v in LG.vertices(board_graph)]
-    forward_adjacency_list = GameGraph(Board(board_edges),
-                                       allow_suicide = allow_self_capture).edges
+    game_graph = GameGraph(Board(board_edges),
+                           allow_suicide = allow_self_capture)
+    forward_adjacency_list = game_graph.edges
     nv = length(forward_adjacency_list)
     ne = sum(length.(forward_adjacency_list))
     backward_adjacency_list = [Int[] for v in 1:nv]
@@ -62,6 +64,10 @@ function go_game_graph(board_graph::LG.SimpleGraph; allow_self_capture = true,
         for w in forward_adjacency_list[v]
             push!(backward_adjacency_list[w], v)
         end
+    end
+
+    if boards isa Vector{Vector{Int}}
+        append!(boards, game_graph.board)
     end
 
     return LG.SimpleDiGraph(ne, forward_adjacency_list, backward_adjacency_list)
