@@ -1135,15 +1135,9 @@ id | Written in binary this encodes the edges in the board graph. Multiple id nu
 board graph | Depiction of the board graph.
 board nodes | Number of nodes in the board graph.
 board edges | Number of edges in the board graph.
-game nodes | Number of nodes in the game graph. Corresponds to the
-number of legal positions.
-game edges | Number of edges in the game graph. Corresponds to the
-number of distinct moves.
-longest path | Length of the longest simple path starting at node 1
-(empty position). This is measured by the number of edges, or
-equivalently go moves, in the path. Written as an interval if there is
-a gap between the lower and the upper bound. A lower bound of 0 means
-that no serious attempt to find a long path has been made.
+game nodes | Number of nodes in the game graph. Corresponds to the number of legal positions.
+game edges | Number of edges in the game graph. Corresponds to the number of distinct moves.
+longest path | Length of the longest simple path starting at node 1 (empty position). This is measured by the number of edges, or equivalently go moves, in the path. Written as an interval if there is a gap between the lower and the upper bound. A lower bound of 0 means that no serious attempt to find a long path has been made.
 
 Note: The table contains no board graphs with isolated nodes since
 they induce game graphs isomorphic to the same graph without the
