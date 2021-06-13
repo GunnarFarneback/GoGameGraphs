@@ -1,9 +1,6 @@
 module GoGameGraphs
-using Compat
 
-@static if VERSION >= v"0.7"
-    using LinearAlgebra
-end
+using LinearAlgebra
 
 export Board, GameGraph, export_graph, unique_graphs, smallest_isomorphic_id,
        is_board_graph_connected, remap
@@ -145,11 +142,7 @@ ternary_encode(board::Board) = 1 + dot(board.board, 3 .^ (length(board.board)-1:
 # the requested base 3 encoding. In that case return false.
 function setup_position!(board::Board, pos::Int)
     clear!(board)
-    if VERSION < v"0.7-"
-        x = base(3, pos - 1, length(board.board))
-    else
-        x = string(pos - 1, base = 3, pad = length(board.board))
-    end
+    x = string(pos - 1, base = 3, pad = length(board.board))
     for i = 1:length(board.board)
         c = parse(Int, x[i])
         if c > 0
@@ -234,7 +227,7 @@ end
 # lack successors in B. We handle this by assuming that first column
 # in B corresponds to the empty board and never remove it.
 function compress_board_graph(B::Matrix{Int}, boards::Vector{Vector{Int}})
-    Bsum = vec(Compat.sum(B, dims = 1))
+    Bsum = vec(sum(B, dims = 1))
     Bsum[1] = 1
     I = findall(Bsum .!= 0)
     J = zeros(Int, size(B, 2))
@@ -279,12 +272,8 @@ function unique_graphs(n)
         if isomorphisms[k] >= 0
             continue
         end
-        if VERSION < v"0.7-"
-            x = map(x->parse(Int, x), split(base(2, k - 1, m), ""))
-        else
-            x = map(x->parse(Int, x),
-                    split(string(k - 1, base = 2, pad = m), ""))
-        end
+        x = map(x->parse(Int, x),
+                split(string(k - 1, base = 2, pad = m), ""))
         mask = .!triu(trues(n, n))
         C = zeros(Int, n, n)
         C[mask] = x
@@ -336,11 +325,7 @@ the board graph `id`, i.e. with no isolated nodes.
 """
 function is_board_graph_connected(id, N = num_nodes(id))
     m = N * (N - 1) ÷ 2
-    if VERSION < v"0.7-"
-        x = map(x->parse(Int, x), split(base(2, id, m), ""))
-    else
-        x = map(x->parse(Int, x), split(string(id, base = 2, pad = m), ""))
-    end
+    x = map(x->parse(Int, x), split(string(id, base = 2, pad = m), ""))
     mask = .!triu(trues(N, N))
     C = zeros(Int, N, N)
     C[mask] = x
@@ -393,13 +378,9 @@ function remap(source_board::Board,
     B = Int[]
     for i = 1:3^N
         if setup_position!(source_board, i)
-            if VERSION < v"0.7-"
-                j = 1 + parse(Int, base(3, i - 1, N)[permutation], 3)
-            else
-                j = 1 + parse(Int,
-                              string(i - 1, base = 3, pad = N)[permutation],
-                              base = 3)
-            end
+            j = 1 + parse(Int,
+                          string(i - 1, base = 3, pad = N)[permutation],
+                          base = 3)
             push!(B, j)
         end
     end
