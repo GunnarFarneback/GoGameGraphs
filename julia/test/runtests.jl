@@ -14,7 +14,7 @@ if isdir(joinpath(@__DIR__, "../../graphs"))
             for id in [1, 3, 7, 11, 12, 13, 15, 30, 31, 63]
                 export_graph(filename, GameGraph(Board(id)))
                 s = read(joinpath(@__DIR__, "../../graphs/graph$(id)"), String)
-                @test s == read(filename, String)
+                @test replace(s, "\r\n" => "\n") == read(filename, String)
             end
         end
     end
