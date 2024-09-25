@@ -1,7 +1,7 @@
 name = "GoGameGraphs"
 uuid = "56c941c6-2185-42eb-b028-2000e1fdc468"
 authors = ["Gunnar Farnebäck <gunnar@lysator.liu.se>"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
@@ -9,7 +9,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [compat]
 Graphs = "1.4"
-julia = "1"
+julia = "1.9"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
