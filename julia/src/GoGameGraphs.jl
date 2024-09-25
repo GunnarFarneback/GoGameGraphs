@@ -7,7 +7,6 @@ export go_board_graph, go_game_graph
 export Board, GameGraph, export_graph, unique_graphs, smallest_isomorphic_id,
        is_board_graph_connected, remap
 
-using Combinatorics
 """
     go_board_graph(n::Integer)
 
@@ -463,6 +462,57 @@ function remap(source_board::Board,
     end
 
     return M
+end
+
+# [Heap's algorithm](https://en.wikipedia.org/wiki/Heap%27s_algorithm)
+# implemented as an iterator of sorts.
+#
+# Important: This is reusing and mutating the returned permutation in
+# every step. As a consequence `collect` will return n! copies of the
+# same vector and would need to be replaced by
+#     [copy(p) for p in permutations(x)]
+#
+# TODO: Reimplement this in a way which is a little more true to the
+# iteration protocol. The mutating property is important to make this
+# allocation-free though.
+#
+# TODO: Find out why `iterate` is making one allocation per call. It
+# looks like it's coming from the return of a tuple. Check if this
+# disappears on newer Julia than 1.10.
+#
+# Note: `Combinatorics.permutations` allocates a lot and we don't need
+# the permutations to be sorted in any particular way.
+mutable struct Permutations
+    A::Vector{Int}
+    c::Vector{Int}
+    i::Int
+end
+
+permutations(A) = Permutations(collect(A), fill(1, length(A)), 1)
+
+Base.length(h::Permutations) = prod(1:length(h.A))
+
+function Base.iterate(permutations::Permutations, state = nothing)
+    (; A, c, i) = permutations
+    if i == 1
+        permutations.i = 2
+        return A, nothing
+    end
+    n = length(c)
+    while c[i] >= i
+        c[i] = 1
+        i += 1
+        i > n && return nothing
+    end
+    if isodd(i)
+        A[1], A[i] = A[i], A[1]
+    else
+        A[c[i]], A[i] = A[i], A[c[i]]
+    end
+    c[i] += 1
+    i = 2
+    permutations.i = i
+    return A, nothing
 end
 
 end
