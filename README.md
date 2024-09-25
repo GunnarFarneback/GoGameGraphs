@@ -14,10 +14,10 @@ particular interest is finding the longest simple path starting from
 the empty position, which corresponds to the longest game of go that
 can be played on the specific board graph.
 
-Go Game Graphs are sparse directed graphs with an abundance of cycles.
-They range from very small up to arbitrarily large sizes and could
-be useful for testing various graph algorithms applicable to this kind
-of graph.
+Go Game Graphs are sparse directed graphs with an abundance of cycles
+and a small radius. They range from very small up to arbitrarily
+large sizes and could be useful for testing various graph algorithms
+applicable to this kind of graph.
 
 This repository provides:
 * Code in Julia and C to generate all Go Game Graphs induced from
@@ -26,6 +26,15 @@ Board Graphs with up to 12 nodes.
 with up to 7 nodes, and a selection of larger ones.
 * Sample maximum length paths.
 
+## Julia Package
+
+See [separate README](julia/README.md).
+
+## C Code
+
+The C code is a [single source file](c/GoGameGraphs.c) which you can
+compile into an executable and run with the board graph id as argument
+to get an adjacency list representation of the game graph.
 
 ### Table of Small Go Game Graphs
 
