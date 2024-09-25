@@ -1,6 +1,5 @@
 module GoGameGraphs
 
-using LinearAlgebra
 using Graphs: SimpleGraph, SimpleDiGraph, nv, vertices, outneighbors
 
 export go_board_graph, go_game_graph
@@ -203,7 +202,35 @@ function play!(board::Board, node, color)
 end
 
 # Encode the board in base 3.
-ternary_encode(board::Board) = 1 + dot(board.board, 3 .^ (length(board.board)-1:-1:0))
+ternary_encode(board::Board) = ternary_encode(board.board)
+
+function ternary_encode(x::Vector)
+    s = 0
+    for i in 1:length(x)
+        s *= 3
+        s += x[i]
+    end
+    return s + 1
+end
+
+function ternary_decode(id::Int, n::Int)
+    id -= 1
+    x = zeros(Int, n)
+    for i = n:-1:1
+        x[i] = mod(id, 3)
+        id ÷= 3
+    end
+    return x
+end
+
+# Convert integer id to binary representation.
+function binary_decode!(x, id)
+    m = length(x)
+    for i in eachindex(x)
+        x[i] = (id >> (m - i)) & 1
+    end
+    return x
+end
 
 # Set up stones on a board to match a base 3 encoding. This is done by
 # playing the stones one by one, starting from the empty board. If and
@@ -212,9 +239,8 @@ ternary_encode(board::Board) = 1 + dot(board.board, 3 .^ (length(board.board)-1:
 # the requested base 3 encoding. In that case return false.
 function setup_position!(board::Board, pos::Int)
     clear!(board)
-    x = string(pos - 1, base = 3, pad = length(board.board))
-    for i = 1:length(board.board)
-        c = parse(Int, x[i])
+    x = ternary_decode(pos, length(board.board))
+    for (i, c) in enumerate(x)
         if c > 0
             play!(board, i, c)
         end
@@ -266,19 +292,19 @@ function GameGraph(board::Board; allow_suicide = true)
     for j = 1:3^N
         if setup_position!(board, j)
             boards[j] = copy(board.board)
-            for i = 1:2*N
-                B[i,j] = trymove(board, i, allow_suicide)
+            for i = 1:(2 * N)
+                B[i, j] = trymove(board, i, allow_suicide)
                 # Filter out single stone suicides to get rid of
                 # self-loops in the graph representation.
-                if B[i,j] == j
-                    B[i,j] = 0
+                if B[i, j] == j
+                    B[i, j] = 0
                 end
             end
         end
     end
 
     B, boards = compress_board_graph(B, boards)
-    edges = [sort(vec(filter(x -> x > 0, B[:,k]))) for k = 1:size(B, 2)]
+    edges = [sort(vec(filter(>(0), B[:, k]))) for k = 1:size(B, 2)]
 
     return GameGraph(edges, boards)
 end
@@ -299,11 +325,11 @@ end
 function compress_board_graph(B::Matrix{Int}, boards::Vector{Vector{Int}})
     Bsum = vec(sum(B, dims = 1))
     Bsum[1] = 1
-    I = findall(Bsum .!= 0)
+    I = findall(!=(0), Bsum)
     J = zeros(Int, size(B, 2))
     J[I] = 1:length(I)
-    C = B[:,I]
-    C[C.>0] = J[C[C.>0]]
+    C = B[:, I]
+    C[C .> 0] = J[C[C .> 0]]
     return C, boards[I]
 end
 
@@ -337,46 +363,51 @@ function unique_graphs(n)
     @assert(m <= 62)
     M = 1 << m
     isomorphisms = fill(-1, M)
-    a = 1 .<< ((m-1):-1:0)
+    id = Int[]
+    C = zeros(Int, n, n)
+    a = zeros(Int, n, n)
+    fill_lower_triangle!(a, 1 .<< ((m-1):-1:0))
+    perm = [copy(p) for p in permutations(1:n)]
+    x = zeros(Int, m)
     for k = 1:M
         if isomorphisms[k] >= 0
             continue
         end
-        x = map(x->parse(Int, x),
-                split(string(k - 1, base = 2, pad = m), ""))
-        mask = .!triu(trues(n, n))
-        C = zeros(Int, n, n)
-        C[mask] = x
-        C += C'
-        id = Int[]
-        for p in permutations(1:n)
-            i = dot(C[p,p][mask], a)
-            push!(id, i)
+        binary_decode!(x, k - 1)
+        C .= 0
+        fill_lower_triangle!(C, x, true)
+        for p in perm
+            push!(id, permuted_dot(C, a, p))
         end
         isomorphisms[id .+ 1] .= minimum(id)
+        empty!(id)
     end
     return unique(isomorphisms)
 end
 
 """
     smallest_isomorphic_id(board::Board)
+    smallest_isomorphic_id(n::Int)
 
-Find smallest id generating a board graph isomorphic to `board`.
+Find smallest id generating a board graph isomorphic to `board` or
+`Board(n)`.
 """
+smallest_isomorphic_id(n::Int) = smallest_isomorphic_id(Board(n))
+
 function smallest_isomorphic_id(board::Board)
     N = length(board.edges)
     m = N * (N - 1) ÷ 2
-    a = [Int128(1) << x for x in ((m-1):-1:0)]
-    C = zeros(Int, N, N)
+    C = zeros(Int128, N, N)
+    a = zeros(Int128, N, N)
+    fill_lower_triangle!(a, Int128(1) .<< ((m - 1):-1:0))
     for i = 1:N
         for j in board.edges[i]
-            C[i,j] = C[j,i] = 1
+            C[i, j] = C[j, i] = 1
         end
     end
-    mask = .!triu(trues(N, N))
     id = typemax(Int128)
     for p in permutations(1:N)
-        i = dot(C[p,p][mask], a)
+        i = permuted_dot(C, a, p)
         id = min(id, i)
     end
     return id
@@ -395,13 +426,14 @@ the board graph `id`, i.e. with no isolated nodes.
 """
 function is_board_graph_connected(id, N = num_nodes(id))
     m = N * (N - 1) ÷ 2
-    x = map(x->parse(Int, x), split(string(id, base = 2, pad = m), ""))
-    mask = .!triu(trues(N, N))
     C = zeros(Int, N, N)
-    C[mask] = x
-    C += C'
-    C += I
-    return all(C^(N-1) .> 0)
+    x = zeros(Int, m)
+    binary_decode!(x, id)
+    fill_lower_triangle!(C, x, true)
+    for i in 1:N
+        C[i, i] = 1
+    end
+    return all(C^(N - 1) .> 0)
 end
 
 """
@@ -416,6 +448,9 @@ Compute a remapping of the vertices of the Game Graph generated from
 Like above where `target_board` is the `Board` with smallest id that
 is isomorphic to `source_board`.
 """
+remap(source_id::Integer, target_id::Integer = smallest_isomorphic_id(source_id)) =
+    remap(Board(source_id), Board(target_id))
+
 function remap(source_board::Board,
                target_board::Board = Board(smallest_isomorphic_id(source_board)))
     if length(source_board.edges) != length(target_board.edges)
@@ -423,15 +458,15 @@ function remap(source_board::Board,
     end
     N = length(source_board.edges)
     m = N * (N - 1) ÷ 2
-    a = [Int128(1) << x for x in ((m-1):-1:0)]
+    a = [Int128(1) << x for x in ((m - 1):-1:0)]
     C_source = zeros(Int, N, N)
     C_target = zeros(Int, N, N)
     for i = 1:N
         for j in source_board.edges[i]
-            C_source[i,j] = C_source[j,i] = 1
+            C_source[i, j] = C_source[j, i] = 1
         end
         for j in target_board.edges[i]
-            C_target[i,j] = C_target[j,i] = 1
+            C_target[i, j] = C_target[j, i] = 1
         end
     end
     permutation = Int[]
@@ -448,9 +483,7 @@ function remap(source_board::Board,
     B = Int[]
     for i = 1:3^N
         if setup_position!(source_board, i)
-            j = 1 + parse(Int,
-                          string(i - 1, base = 3, pad = N)[permutation],
-                          base = 3)
+            j = ternary_encode(source_board.board[permutation])
             push!(B, j)
         end
     end
@@ -458,10 +491,45 @@ function remap(source_board::Board,
     BB = sort(B)
     M = Int[]
     for i = 1:length(B)
-        push!(M, findall(BB .== B[i])[1])
+        push!(M, findfirst(==(B[i]), BB))
     end
 
     return M
+end
+
+# Compute `dot(x[p, p], y)` for square matrices `x`, `y` and
+# permutation vector `p`, without materializing the permuted matrix.
+function permuted_dot(x, y, p)
+    N = length(p)
+    sum(x[p[i], p[j]] * y[i, j] for i in 1:N, j in 1:N)
+end
+
+# More efficient implementation of `x[.!triu(trues(size(x)))] .= v`.
+#
+# E.g.
+#     fill_lower_triangle!(zeros(Int, 3, 3), 1:3)
+# results in
+#     0  0  0
+#     1  0  0
+#     2  3  0
+#
+# If `symmetric` is true, the upper triangle is filled with the
+# transpose.
+function fill_lower_triangle!(x, v, symmetric = false)
+    n = size(x, 1)
+    m = length(v)
+    k = 1
+    for j in 1:(n - 1)
+        for i in (j + 1):n
+            x[i, j] = v[k]
+            if symmetric
+                x[j, i] = v[k]
+            end
+            k += 1
+        end
+    end
+
+    return x
 end
 
 # [Heap's algorithm](https://en.wikipedia.org/wiki/Heap%27s_algorithm)
